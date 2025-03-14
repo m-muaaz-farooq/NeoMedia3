@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "NeoMedia3"
-include(":app")
+include(":media3extension")
  
