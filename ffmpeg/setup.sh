@@ -16,7 +16,7 @@ MBEDTLS_DIR=$SOURCES_DIR/mbedtls-$MBEDTLS_VERSION
 
 # Configuration
 ANDROID_ABIS="x86_64 armeabi-v7a arm64-v8a"
-ANDROID_PLATFORM=21
+ANDROID_PLATFORM=26
 ENABLED_DECODERS="vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd h264 hevc mpeg2video mpegvideo libvpx_vp8 libvpx_vp9"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || sysctl -n hw.pysicalcpu || echo 4)
 
@@ -35,7 +35,7 @@ esac
 
 # Build tools
 TOOLCHAIN_PREFIX="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/${HOST_PLATFORM}"
-CMAKE_EXECUTABLE=${ANDROID_SDK_HOME}/cmake/3.22.1/bin/cmake
+CMAKE_EXECUTABLE=${ANDROID_SDK_ROOT}/cmake/3.22.1/bin/cmake
 
 mkdir -p $SOURCES_DIR
 
@@ -131,28 +131,60 @@ function buildLibVpx() {
 }
 
 function buildMbedTLS() {
-    pushd $MBEDTLS_DIR
+    echo "Starting MbedTLS build process..."
+    pushd $MBEDTLS_DIR || { echo "ERROR: Failed to enter MbedTLS directory: $MBEDTLS_DIR"; exit 1; }
 
     for ABI in $ANDROID_ABIS; do
+        echo "Building MbedTLS for ABI: $ABI"
 
-      CMAKE_BUILD_DIR=$MBEDTLS_DIR/mbedtls_build_${ABI}
-      rm -rf ${CMAKE_BUILD_DIR}
-      mkdir -p ${CMAKE_BUILD_DIR}
-      cd ${CMAKE_BUILD_DIR}
+        if [ "$ABI" == "arm64-v8a" ]; then
+            EXTRA_CFLAGS="-march=armv8-a+crypto -Wno-error=documentation"
+            echo "Adding crypto and documentation flags for arm64-v8a: ${EXTRA_CFLAGS}"
+        else
+            EXTRA_CFLAGS="-Wno-error=documentation"
+        fi
 
-      ${CMAKE_EXECUTABLE} .. \
-       -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-       -DANDROID_ABI=$ABI \
-       -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
-       -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/external/$ABI \
-       -DENABLE_TESTING=0
+        CMAKE_BUILD_DIR=$MBEDTLS_DIR/mbedtls_build_${ABI}
+        echo "Cleaning previous build directory: $CMAKE_BUILD_DIR"
+        rm -rf ${CMAKE_BUILD_DIR}
+        mkdir -p ${CMAKE_BUILD_DIR} || { echo "ERROR: Failed to create build directory: $CMAKE_BUILD_DIR"; exit 1; }
+        cd ${CMAKE_BUILD_DIR} || { echo "ERROR: Failed to enter build directory: $CMAKE_BUILD_DIR"; exit 1; }
 
-      make -j$JOBS
-      make install
+        echo "Running CMake configuration..."
+        ${CMAKE_EXECUTABLE} .. \
+        -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+        -DANDROID_ABI="$ABI" \
+        -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
+        -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/external/$ABI \
+        -DENABLE_TESTING=0 \
+        -DCMAKE_C_FLAGS="${EXTRA_CFLAGS}"
 
+        if [ $? -ne 0 ]; then
+            echo "ERROR: CMake configuration failed for ABI: $ABI"
+            exit 1
+        fi
+
+        echo "Starting build process with make -j$(nproc)..."
+        make -j$(nproc)
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Build failed for ABI: $ABI"
+            exit 1
+        fi
+
+        echo "Installing MbedTLS..."
+        make install
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Installation failed for ABI: $ABI"
+            exit 1
+        fi
+
+        echo "Successfully built and installed MbedTLS for ABI: $ABI"
     done
-    popd
+
+    popd || { echo "ERROR: Failed to return to previous directory"; exit 1; }
+    echo "MbedTLS build process completed successfully!"
 }
+
 
 function buildFfmpeg() {
   pushd $FFMPEG_DIR
