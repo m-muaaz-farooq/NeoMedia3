@@ -156,8 +156,8 @@ function buildMbedTLS() {
         -DANDROID_ABI="$ABI" \
         -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
         -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/external/$ABI \
-        -DENABLE_TESTING=0 \
-        -DCMAKE_C_FLAGS="${EXTRA_CFLAGS}"
+        -DCMAKE_C_FLAGS="${EXTRA_CFLAGS}" \
+        -DENABLE_TESTING=0
 
         if [ $? -ne 0 ]; then
             echo "ERROR: CMake configuration failed for ABI: $ABI"
@@ -246,10 +246,7 @@ function buildFfmpeg() {
       --disable-doc \
       --disable-programs \
       --disable-everything \
-      --disable-vulkan \
       --disable-avdevice \
-      --disable-avformat \
-      --disable-postproc \
       --disable-avfilter \
       --disable-symver \
       --enable-parsers \
@@ -257,7 +254,6 @@ function buildFfmpeg() {
       --enable-swresample \
       --enable-avformat \
       --enable-libvpx \
-      --enable-protocol=file,http,https,mmsh,mmst,pipe,rtmp,rtmps,rtmpt,rtmpts,rtp,tls \
       --enable-version3 \
       --enable-mbedtls \
       --extra-ldexeflags=-pie \
@@ -302,5 +298,9 @@ if [[ ! -d "$OUTPUT_DIR" && ! -d "$BUILD_DIR" ]]; then
   # Building library
   buildMbedTLS
   buildLibVpx
+  buildFfmpeg
+fi
+
+if [[ ! -d "$OUTPUT_DIR" && -d "$BUILD_DIR" ]]; then
   buildFfmpeg
 fi
