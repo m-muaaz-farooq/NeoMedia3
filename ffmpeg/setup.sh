@@ -241,12 +241,15 @@ function buildFfmpeg() {
       --extra-ldflags="$DEP_LD_FLAGS" \
       --pkg-config="$(which pkg-config)" \
       --target-os=android \
-      --enable-shared \
-      --disable-static \
+      --disable-vulkan \
       --disable-doc \
       --disable-programs \
       --disable-everything \
+      --enable-shared \
+      --disable-static \
       --disable-avdevice \
+      --disable-avformat \
+      --disable-postproc \
       --disable-avfilter \
       --disable-symver \
       --enable-parsers \
@@ -254,8 +257,8 @@ function buildFfmpeg() {
       --enable-swresample \
       --enable-avformat \
       --enable-libvpx \
+      --enable-protocol=file,http,https,mmsh,mmst,pipe,rtmp,rtmps,rtmpt,rtmpts,rtp,tls \
       --enable-version3 \
-      --enable-mbedtls \
       --extra-ldexeflags=-pie \
       --disable-debug \
       ${EXTRA_BUILD_CONFIGURATION_FLAGS} \
