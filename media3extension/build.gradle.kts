@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.muaaz.neomedia3"
     compileSdk = 35
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         minSdk = 24
@@ -15,11 +16,6 @@ android {
                 cppFlags += ""
             }
         }
-        ndk {
-            abiFilters += listOf("x86_64", "armeabi-v7a", "arm64-v8a")
-        }
-
-        //ndkVersion = "25.2.9519653"
     }
 
     buildTypes {
@@ -29,6 +25,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            ndk {
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+            }
         }
     }
     compileOptions {
