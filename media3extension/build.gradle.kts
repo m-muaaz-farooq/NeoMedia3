@@ -8,18 +8,18 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.muaaz.neomedia3"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
                 cppFlags += ""
             }
         }
+        ndk {
+            abiFilters += listOf("x86_64", "armeabi-v7a", "arm64-v8a")
+        }
+
+        //ndkVersion = "25.2.9519653"
     }
 
     buildTypes {
