@@ -38,6 +38,7 @@ add_library(media3extension SHARED
 
 # Link the libraries statically
 target_link_libraries(media3extension
+        log
         android
         avcodec
         avformat
