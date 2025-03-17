@@ -30,7 +30,11 @@ foreach(lib ${FFMPEG_LIBS} ${EXT_LIBS})
     set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION ${LIB_DIR}/lib${lib}.a)
 endforeach()
 
-add_library(media3extension SHARED NeoPlayerLib.cpp)
+add_library(media3extension SHARED
+        ffmain.cpp
+        ffcommon.cpp
+        ffaudio.cpp
+        ffvideo.cpp)
 
 # Link the libraries statically
 target_link_libraries(media3extension
