@@ -2,6 +2,7 @@ package com.muaaz.neomedia3
 
 import android.content.Context
 import android.os.Handler
+import androidx.annotation.Keep
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -12,6 +13,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 
 @UnstableApi
+@Keep
 open class NeoRenderersFactory(context: Context): DefaultRenderersFactory(context) {
     override fun buildAudioRenderers(
         context: Context,

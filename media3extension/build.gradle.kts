@@ -1,5 +1,7 @@
+import com.android.build.gradle.internal.tasks.factory.dependsOn
+
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
 }
 
@@ -27,7 +29,7 @@ android {
             )
 
             ndk {
-                abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64", "x86")
             }
         }
     }
@@ -45,7 +47,20 @@ android {
             path = file("src/main/cpp/CMakeLists.txt")
         }
     }
+
+    /*sourceSets {
+        sourceSets["main"].jniLibs.srcDirs("src/main/jniLibs")
+    }*/
 }
+
+val ffmpegSetup by tasks.registering(Exec::class) {
+    workingDir = file("../ffmpeg")
+    // export ndk path and run bash script
+    environment("ANDROID_SDK_HOME", android.sdkDirectory.absolutePath)
+    environment("ANDROID_NDK_HOME", android.ndkDirectory.absolutePath)
+    commandLine("bash", "setupOriginal.sh")
+}
+tasks.preBuild.dependsOn(ffmpegSetup)
 
 dependencies {
     implementation(libs.androidx.media3.exoplayer)

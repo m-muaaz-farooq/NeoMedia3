@@ -17,7 +17,7 @@ MBEDTLS_DIR=$SOURCES_DIR/mbedtls-$MBEDTLS_VERSION
 # Configuration
 ANDROID_ABIS="x86_64 armeabi-v7a arm64-v8a"
 ANDROID_PLATFORM=26
-ENABLED_DECODERS="vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd h264 hevc mpeg2video mpegvideo libvpx_vp8 libvpx_vp9"
+ENABLED_DECODERS="vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd h264 hevc mpeg2video mpegvideo flv"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || sysctl -n hw.pysicalcpu || echo 4)
 
 # Set up host platform variables
@@ -121,7 +121,8 @@ function buildLibVpx() {
       --disable-libyuv \
       --enable-better-hw-compatibility \
       --disable-runtime-cpu-detect \
-      ${EXTRA_BUILD_FLAGS}
+      ${EXTRA_BUILD_FLAGS} \
+      --enable-pic
 
     make clean
     make -j$JOBS
@@ -256,8 +257,8 @@ function buildFfmpeg() {
       --enable-demuxers \
       --enable-swresample \
       --enable-avformat \
-      --enable-libvpx \
-      --enable-protocol=file,http,https,mmsh,mmst,pipe,rtmp,rtmps,rtmpt,rtmpts,rtp,tls \
+      --disable-libvpx \
+      --enable-protocol=file,pipe \
       --enable-version3 \
       --extra-ldexeflags=-pie \
       --disable-debug \
