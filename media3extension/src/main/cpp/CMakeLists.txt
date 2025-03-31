@@ -13,7 +13,7 @@ set(
         # List variable name
         ffmpeg_libs_names
         # Values in the list
-        avutil avcodec swresample swscale)
+        avutil avcodec avformat swresample swscale)
 
 foreach (ffmpeg_lib_name ${ffmpeg_libs_names})
     add_library(
@@ -32,10 +32,15 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         ffmain.cpp
         ffcommon.cpp
         ffaudio.cpp
-        ffvideo.cpp)
+        ffvideo.cpp
+        mediainfo.cpp
+        utils.cpp
+        frame_loader_context.cpp
+        frame_extractor.cpp)
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
         # List libraries link to the target library
         log
         android
+        jnigraphics
         ${ffmpeg_libs_names})
