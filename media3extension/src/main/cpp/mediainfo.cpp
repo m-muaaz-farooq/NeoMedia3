@@ -39,6 +39,21 @@ void onMediaInfoFound(JNIEnv *env, jobject jMediaInfoBuilder, AVFormatContext *a
     const char *fileFormatName = avFormatContext->iformat->long_name;
 
     long duration_ms = (long) (avFormatContext->duration * av_q2d(AV_TIME_BASE_Q) * 1000.0);
+    // If duration is 0, compute it from the individual streams
+    if (duration_ms == 0) {
+        int64_t max_duration = 0;
+        for (unsigned i = 0; i < avFormatContext->nb_streams; i++) {
+            AVStream *stream = avFormatContext->streams[i];
+            if (stream->duration > max_duration) {
+                max_duration = stream->duration;
+            }
+        }
+
+        // Use the time base of the first stream for conversion
+        double time_base = av_q2d(avFormatContext->streams[0]->time_base);
+        duration_ms = (long) (max_duration * time_base * 1000.0);
+    }
+
     jstring jFileFormatName = env->NewStringUTF(fileFormatName);
 
     utils_call_instance_method_void(env,
