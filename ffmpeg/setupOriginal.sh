@@ -14,7 +14,7 @@ VPX_DIR=$SOURCES_DIR/libvpx-$VPX_VERSION
 
 # Configuration
 ANDROID_ABIS="x86 x86_64 armeabi-v7a arm64-v8a"
-ENABLED_DECODERS="vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd h264 hevc mpeg2video mpegvideo libvpx_vp8 libvpx_vp9 vp6 vp6f svq1 svq3 h263 h263p"
+ENABLED_DECODERS="flv vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd h264 hevc mpeg2video mpegvideo libvpx_vp8 libvpx_vp9 vp6 vp6f svq1 svq3 h263 h263p"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || sysctl -n hw.pysicalcpu || echo 4)
 
 # Set up host platform variables
@@ -103,7 +103,19 @@ function buildLibVpx() {
       --enable-static \
       --disable-shared \
       --disable-examples \
+      --disable-ccache \
+      --disable-debug \
+      --disable-gprof \
+      --disable-gcov \
+      --disable-dependency-tracking \
+      --disable-install-docs \
+      --disable-install-bins \
+      --disable-install-srcs \
+      --disable-tools \
       --disable-docs \
+      --disable-unit-tests \
+      --disable-decode-perf-tests \
+      --disable-encode-perf-tests \
       --enable-realtime-only \
       --enable-install-libs \
       --enable-multithread \
