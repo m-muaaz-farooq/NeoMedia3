@@ -11,4 +11,5 @@ data class VideoStream(
     val frameWidth: Int,
     val frameHeight: Int,
     val rotation: Int,
+    val isHdr: Boolean
 )
