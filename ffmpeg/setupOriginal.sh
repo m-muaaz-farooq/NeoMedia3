@@ -2,7 +2,6 @@
 
 # Versions
 VPX_VERSION=1.13.0
-MBEDTLS_VERSION=3.4.1
 FFMPEG_VERSION=6.0
 
 # Directories
@@ -12,12 +11,10 @@ OUTPUT_DIR=$BASE_DIR/output
 SOURCES_DIR=$BASE_DIR/sources
 FFMPEG_DIR=$SOURCES_DIR/ffmpeg-$FFMPEG_VERSION
 VPX_DIR=$SOURCES_DIR/libvpx-$VPX_VERSION
-MBEDTLS_DIR=$SOURCES_DIR/mbedtls-$MBEDTLS_VERSION
 
 # Configuration
-ANDROID_ABIS="x86_64 armeabi-v7a arm64-v8a"
-ANDROID_PLATFORM=26
-ENABLED_DECODERS="vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd h264 hevc mpeg2video mpegvideo flv"
+ANDROID_ABIS="x86 x86_64 armeabi-v7a arm64-v8a"
+ENABLED_DECODERS="flv vorbis opus flac alac pcm_mulaw pcm_alaw mp3 amrnb amrwb aac ac3 eac3 dca mlp truehd h264 hevc mpeg2video mpegvideo libvpx_vp8 libvpx_vp9 vp6 vp6f svq1 svq3 h263 h263p"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || sysctl -n hw.pysicalcpu || echo 4)
 
 # Set up host platform variables
@@ -35,7 +32,6 @@ esac
 
 # Build tools
 TOOLCHAIN_PREFIX="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/${HOST_PLATFORM}"
-CMAKE_EXECUTABLE=${ANDROID_SDK_ROOT}/cmake/3.22.1/bin/cmake
 
 mkdir -p $SOURCES_DIR
 
@@ -47,17 +43,6 @@ function downloadLibVpx() {
   [ -e $VPX_FILE ] || { echo "$VPX_FILE does not exist. Exiting..."; exit 1; }
   tar -zxf $VPX_FILE
   rm $VPX_FILE
-  popd
-}
-
-function downloadMbedTLS() {
-  pushd $SOURCES_DIR
-  echo "Downloading mbedtls source code of version $MBEDTLS_VERSION..."
-  MBEDTLS_FILE=mbedtls-$MBEDTLS_VERSION.tar.gz
-  curl -L "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v${MBEDTLS_VERSION}.tar.gz" -o $MBEDTLS_FILE
-  [ -e $MBEDTLS_FILE ] || { echo "$MBEDTLS_FILE does not exist. Exiting..."; exit 1; }
-  tar -zxf $MBEDTLS_FILE
-  rm $MBEDTLS_FILE
   popd
 }
 
@@ -87,6 +72,11 @@ function buildLibVpx() {
       EXTRA_BUILD_FLAGS="--force-target=armv8-android-gcc"
       TOOLCHAIN=aarch64-linux-android21-
       ;;
+    x86)
+      EXTRA_BUILD_FLAGS="--force-target=x86-android-gcc --disable-sse2 --disable-sse3 --disable-ssse3 --disable-sse4_1 --disable-avx --disable-avx2 --enable-pic"
+      VPX_AS=${TOOLCHAIN_PREFIX}/bin/yasm
+      TOOLCHAIN=i686-linux-android21-
+      ;;
     x86_64)
       EXTRA_BUILD_FLAGS="--force-target=x86_64-android-gcc --disable-sse2 --disable-sse3 --disable-ssse3 --disable-sse4_1 --disable-avx --disable-avx2 --enable-pic --disable-neon --disable-neon-asm"
       VPX_AS=${TOOLCHAIN_PREFIX}/bin/yasm
@@ -113,7 +103,19 @@ function buildLibVpx() {
       --enable-static \
       --disable-shared \
       --disable-examples \
+      --disable-ccache \
+      --disable-debug \
+      --disable-gprof \
+      --disable-gcov \
+      --disable-dependency-tracking \
+      --disable-install-docs \
+      --disable-install-bins \
+      --disable-install-srcs \
+      --disable-tools \
       --disable-docs \
+      --disable-unit-tests \
+      --disable-decode-perf-tests \
+      --disable-encode-perf-tests \
       --enable-realtime-only \
       --enable-install-libs \
       --enable-multithread \
@@ -121,8 +123,7 @@ function buildLibVpx() {
       --disable-libyuv \
       --enable-better-hw-compatibility \
       --disable-runtime-cpu-detect \
-      ${EXTRA_BUILD_FLAGS} \
-      --enable-pic
+      ${EXTRA_BUILD_FLAGS}
 
     make clean
     make -j$JOBS
@@ -130,62 +131,6 @@ function buildLibVpx() {
   done
   popd
 }
-
-function buildMbedTLS() {
-    echo "Starting MbedTLS build process..."
-    pushd $MBEDTLS_DIR || { echo "ERROR: Failed to enter MbedTLS directory: $MBEDTLS_DIR"; exit 1; }
-
-    for ABI in $ANDROID_ABIS; do
-        echo "Building MbedTLS for ABI: $ABI"
-
-        if [ "$ABI" == "arm64-v8a" ]; then
-            EXTRA_CFLAGS="-march=armv8-a+crypto -Wno-error=documentation"
-            echo "Adding crypto and documentation flags for arm64-v8a: ${EXTRA_CFLAGS}"
-        else
-            EXTRA_CFLAGS="-Wno-error=documentation"
-        fi
-
-        CMAKE_BUILD_DIR=$MBEDTLS_DIR/mbedtls_build_${ABI}
-        echo "Cleaning previous build directory: $CMAKE_BUILD_DIR"
-        rm -rf ${CMAKE_BUILD_DIR}
-        mkdir -p ${CMAKE_BUILD_DIR} || { echo "ERROR: Failed to create build directory: $CMAKE_BUILD_DIR"; exit 1; }
-        cd ${CMAKE_BUILD_DIR} || { echo "ERROR: Failed to enter build directory: $CMAKE_BUILD_DIR"; exit 1; }
-
-        echo "Running CMake configuration..."
-        ${CMAKE_EXECUTABLE} .. \
-        -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
-        -DANDROID_ABI="$ABI" \
-        -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake \
-        -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/external/$ABI \
-        -DCMAKE_C_FLAGS="${EXTRA_CFLAGS}" \
-        -DENABLE_TESTING=0
-
-        if [ $? -ne 0 ]; then
-            echo "ERROR: CMake configuration failed for ABI: $ABI"
-            exit 1
-        fi
-
-        echo "Starting build process with make -j$(nproc)..."
-        make -j$(nproc)
-        if [ $? -ne 0 ]; then
-            echo "ERROR: Build failed for ABI: $ABI"
-            exit 1
-        fi
-
-        echo "Installing MbedTLS..."
-        make install
-        if [ $? -ne 0 ]; then
-            echo "ERROR: Installation failed for ABI: $ABI"
-            exit 1
-        fi
-
-        echo "Successfully built and installed MbedTLS for ABI: $ABI"
-    done
-
-    popd || { echo "ERROR: Failed to return to previous directory"; exit 1; }
-    echo "MbedTLS build process completed successfully!"
-}
-
 
 function buildFfmpeg() {
   pushd $FFMPEG_DIR
@@ -211,6 +156,12 @@ function buildFfmpeg() {
       TOOLCHAIN=aarch64-linux-android21-
       CPU=armv8-a
       ARCH=aarch64
+      ;;
+    x86)
+      TOOLCHAIN=i686-linux-android21-
+      CPU=i686
+      ARCH=i686
+      EXTRA_BUILD_CONFIGURATION_FLAGS=--disable-asm
       ;;
     x86_64)
       TOOLCHAIN=x86_64-linux-android21-
@@ -242,12 +193,12 @@ function buildFfmpeg() {
       --extra-ldflags="$DEP_LD_FLAGS" \
       --pkg-config="$(which pkg-config)" \
       --target-os=android \
-      --disable-vulkan \
+      --enable-shared \
+      --disable-static \
       --disable-doc \
       --disable-programs \
       --disable-everything \
-      --enable-shared \
-      --disable-static \
+      --disable-vulkan \
       --disable-avdevice \
       --disable-avformat \
       --disable-postproc \
@@ -257,7 +208,7 @@ function buildFfmpeg() {
       --enable-demuxers \
       --enable-swresample \
       --enable-avformat \
-      --disable-libvpx \
+      --enable-libvpx \
       --enable-protocol=file,pipe \
       --enable-version3 \
       --extra-ldexeflags=-pie \
@@ -284,10 +235,6 @@ function buildFfmpeg() {
 }
 
 if [[ ! -d "$OUTPUT_DIR" && ! -d "$BUILD_DIR" ]]; then
-  # Download MbedTLS source code if it doesn't exist
-  if [[ ! -d "$MBEDTLS_DIR" ]]; then
-    downloadMbedTLS
-  fi
 
   # Download Vpx source code if it doesn't exist
   if [[ ! -d "$VPX_DIR" ]]; then
@@ -300,11 +247,6 @@ if [[ ! -d "$OUTPUT_DIR" && ! -d "$BUILD_DIR" ]]; then
   fi
 
   # Building library
-  buildMbedTLS
   buildLibVpx
-  buildFfmpeg
-fi
-
-if [[ ! -d "$OUTPUT_DIR" && -d "$BUILD_DIR" ]]; then
   buildFfmpeg
 fi
