@@ -114,7 +114,7 @@ void onVideoStreamFound(JNIEnv *env, jobject jMediaInfoBuilder, AVFormatContext 
         if (rotation < 0) rotation += 360;
     }
 
-    int is_hdr = 0;
+    int is_hdr_ = 0;
     // Check color properties
     enum AVColorTransferCharacteristic trc = parameters->color_trc;
     enum AVColorPrimaries color_primaries = parameters->color_primaries;
@@ -125,8 +125,7 @@ void onVideoStreamFound(JNIEnv *env, jobject jMediaInfoBuilder, AVFormatContext 
         // Check for BT.2020 primaries/space
         if (color_primaries == AVCOL_PRI_BT2020 &&
             (color_space == AVCOL_SPC_BT2020_NCL || color_space == AVCOL_SPC_BT2020_CL)) {
-            is_hdr = 1;
-            break;
+            is_hdr_ = 1;
         }
     }
 
@@ -143,7 +142,7 @@ void onVideoStreamFound(JNIEnv *env, jobject jMediaInfoBuilder, AVFormatContext 
                                     parameters->width,
                                     parameters->height,
                                     rotation,
-                                    is_hdr,
+                                    is_hdr_,
                                     frameLoaderContextHandle);
 }
 
